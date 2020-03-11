@@ -1,0 +1,27 @@
+[package]
+name = "miniquad-test"
+version = "0.1.0"
+authors = ["Ponas <mykolas.peteraitis@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+miniquad = "0.2.39"
+
+[package.metadata.android]
+
+package_name = "rust.ponaskovas.miniquad-mandelbrot"
+
+label = "Miniquad Mandelbrot"
+
+res = "res"
+icon = "@mipmap/ic_launcher"
+
+fullscreen = true
+
+[package.metadata.android.application_attributes]
+"android:hardwareAccelerated" = "true"
+
+[package.metadata.android.activity_attributes]
+"android:screenOrientation" = "sensorLandscape"
