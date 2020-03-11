@@ -3,6 +3,8 @@ A simple mandelbrot set explorer made with [miniquad](https://github.com/not-fl3
 
 This project demonstrates how easy it is to code cross-platform applications with [miniquad](https://github.com/not-fl3/miniquad).
 
+[A live WASM demo!](https://ponaskovas.github.io/miniquad-mandelbrot-wasm-demo/)
+
 ## Compiling
 ### Desktop
 Just build for the target you need
