@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "miniquad-test"
+name = "miniquad-mandelbrot"
 version = "0.1.0"
 dependencies = [
  "miniquad",

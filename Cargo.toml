@@ -1,5 +1,5 @@
 [package]
-name = "miniquad-test"
+name = "miniquad-mandelbrot"
 version = "0.1.0"
 authors = ["Ponas <mykolas.peteraitis@gmail.com>"]
 edition = "2018"
