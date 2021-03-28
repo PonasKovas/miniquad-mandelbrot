@@ -1,8 +1,8 @@
 use miniquad::conf::Conf;
 use miniquad::{
-    Bindings, Buffer, BufferLayout, BufferType, Context, EventHandler, MouseButton, Pipeline,
-    Shader, ShaderMeta, TouchPhase, UniformBlockLayout, UniformType, UserData, VertexAttribute,
-    VertexFormat,
+    Bindings, Buffer, BufferLayout, BufferType, Context, EventHandler, FilterMode, MouseButton,
+    Pipeline, Shader, ShaderMeta, Texture, TouchPhase, UniformBlockLayout, UniformType, UserData,
+    VertexAttribute, VertexFormat,
 };
 
 #[repr(C)]
@@ -17,6 +17,7 @@ struct Vertex {
 #[repr(C)]
 struct Uniforms {
     transform: [f32; 16],
+    num_colors: i32,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -32,6 +33,28 @@ struct Mandelbrot {
     zoom: f32,
     center: (f32, f32),
     action: Action,
+}
+const NUM_COLORS: i32 = 12;
+
+// HSV values in [0..1]
+// returns [r, g, b] values from 0 to 255
+//From https://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
+pub fn hsv_to_rgb(h: f32, s: f32, v: f32) -> [u8; 3] {
+    let h_i = (h * 6.) as i32;
+    let f = h * 6. - h_i as f32;
+    let p = v * (1. - s);
+    let q = v * (1. - f * s);
+    let t = v * (1. - (1. - f) * s);
+    let [r, g, b] = match h_i {
+        0 => [v, t, p],
+        1 => [q, v, p],
+        2 => [p, v, t],
+        3 => [p, q, v],
+        4 => [t, p, v],
+        5 => [v, p, q],
+        _ => panic!("Unknown H value {}", h_i),
+    };
+    [(r * 255.) as u8, (g * 255.) as u8, (b * 255.) as u8]
 }
 
 impl Mandelbrot {
@@ -55,10 +78,21 @@ impl Mandelbrot {
         let indices: [u16; 6] = [0, 1, 2, 0, 2, 3];
         let index_buffer = Buffer::immutable(ctx, BufferType::IndexBuffer, &indices);
 
+        let mut colors = vec![];
+        let num = NUM_COLORS as f32;
+        for i in 0..NUM_COLORS {
+            let degree = i as f32 / num;
+            let c = hsv_to_rgb(degree, 1., 1.);
+            colors.extend(c.iter());
+            colors.push(255);
+        }
+
+        let texture = Texture::from_rgba8(ctx, NUM_COLORS as u16, 1, &colors);
+        texture.set_filter(ctx, FilterMode::Nearest);
         let bindings = Bindings {
             vertex_buffers: vec![vertex_buffer],
-            index_buffer: index_buffer,
-            images: Vec::new(),
+            index_buffer,
+            images: vec![texture],
         };
 
         let shader = Shader::new(ctx, SHADER_VERTEX, SHADER_FRAGMENT, SHADER_META);
@@ -135,6 +169,7 @@ impl EventHandler for Mandelbrot {
                 0.0, 0.0, 1.0, 0.0,
                 (scale_x * self.center.0), (scale_y * self.center.1), 0.0, 1.0,
             ],
+            num_colors: NUM_COLORS,
         });
 
         ctx.draw(0, 2 * 3, 1);
@@ -213,7 +248,10 @@ precision highp float;
 
 varying highp vec2 texcoord;
 
-const int max_iterations = 120;
+uniform sampler2D tex;
+uniform int num_colors;
+
+const int max_iterations = 500;
 const float cxmin = -2.0;
 const float cxmax = 1.0;
 const float cymin = -1.5;
@@ -244,16 +282,20 @@ void main() {
     if(b == -1) {
         b = max_iterations;
     }
-    float intensity = float(b)/float(max_iterations);
-    intensity = 2.0*intensity / (abs(intensity) + 1.0);
-    float r = max(0.0, 2.0*intensity - 1.0);
-
-    gl_FragColor = vec4(r, intensity, intensity, 1.0);
+    if (b == max_iterations) {
+        gl_FragColor = vec4(0, 0, 0, 1);
+    } else {
+        float x = float(b-((b / num_colors)*num_colors))/float(num_colors);
+        gl_FragColor = texture2D(tex, vec2(x, 0.5));
+    }
 }"#;
 
 const SHADER_META: ShaderMeta = ShaderMeta {
-    images: &[],
+    images: &["tex"],
     uniforms: UniformBlockLayout {
-        uniforms: &[("transform", UniformType::Mat4)],
+        uniforms: &[
+            ("transform", UniformType::Mat4),
+            ("num_colors", UniformType::Int1),
+        ],
     },
 };
